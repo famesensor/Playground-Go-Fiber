@@ -384,6 +384,190 @@ func main() {
 		return c.SendStatus(403)
 
 	})
+
+	// // Location
+	// app.Post("/", func(c *fiber.Ctx) error {
+	// 	// return c.Location("http://example.com")
+
+	// 	return c.Location("/foo/bar")
+	// })
+
+	// Method
+	app.Post("/method", func(c *fiber.Ctx) error {
+		c.Method() // "POST"
+
+		c.Method("GET")
+		c.Method() // GET
+
+		// ...
+		return c.SendString(c.Method())
+	})
+
+	// MultipartForm && SaveFile
+	app.Post("/multipartform", func(c *fiber.Ctx) error {
+		// Parse the multipart form:
+		if form, err := c.MultipartForm(); err == nil {
+			// => *multipart.Form
+
+			if token := form.Value["token"]; len(token) > 0 {
+				// Get key value:
+				fmt.Println(token[0])
+			}
+
+			// Get all files from "documents" key:
+			files := form.File["documents"]
+			// => []*multipart.FileHeader
+
+			// Loop through files:
+			for _, file := range files {
+				fmt.Println(file.Filename, file.Size, file.Header["Content-Type"][0])
+				// => "tutorial.pdf" 360641 "application/pdf"
+
+				// Save the files to disk:
+				if err := c.SaveFile(file, fmt.Sprintf("./%s", file.Filename)); err != nil {
+					return err
+				}
+			}
+		}
+
+		return nil
+	})
+
+	// Params
+	// GET http://localhost:3000/user/fenny
+	app.Get("/user/:name", func(c *fiber.Ctx) error {
+		c.Params("name") // "fenny"
+
+		// ...
+		return c.SendString(c.Params("name"))
+	})
+
+	app.Get("/v1/*/shop/*", func(c *fiber.Ctx) error {
+		c.Params("*") // outputs the values of the first wildcard segment
+
+		// ROUTE: /v1/*/shop/*
+		// GET:   /v1/brand/4/shop/blue/xs
+		c.Params("*1") // "brand/4"
+		c.Params("*2") // "blue/xs"
+		return c.SendString(c.Params("*4"))
+	})
+
+	// Path
+	app.Get("/users", func(c *fiber.Ctx) error {
+		c.Path() // "/users"
+
+		c.Path("/john")
+		c.Path() // "/john"
+
+		// ...
+		return c.SendString(c.Path())
+	})
+
+	// Query
+	// GET http://localhost:3000/shoes?order=desc&brand=nike
+	app.Get("/", func(c *fiber.Ctx) error {
+		c.Query("order")         // "desc"
+		c.Query("brand")         // "nike"
+		c.Query("empty", "nike") // "nike"
+
+		// ...
+		return c.SendString(c.Query("order"))
+	})
+
+	//	QueryParser
+	// Field names should start with an uppercase letter
+	// curl -X POST "http://localhost:3000/?name=john&pass=doe&products=shoe,hat"
+	type Person struct {
+		Name     string   `query:"name"`
+		Pass     string   `query:"pass"`
+		Products []string `query:"products"`
+	}
+
+	app.Post("/", func(c *fiber.Ctx) error {
+		p := new(Person)
+
+		if err := c.QueryParser(p); err != nil {
+			return err
+		}
+
+		log.Println(p.Name)     // john
+		log.Println(p.Pass)     // doe
+		log.Println(p.Products) // [shoe, hat]
+
+		// ...
+		return c.SendString(p.Name)
+	})
+
+	// Range
+	// Range: bytes=500-700, 700-900
+	app.Get("/", func(c *fiber.Ctx) error {
+		b, _ := c.Range(1000)
+		if b.Type == "bytes" {
+			// for r := range r.Ranges {
+			// 	fmt.Println(r)
+			// 	// [500, 700]
+			// }
+			fmt.Print(b.Ranges)
+		}
+		return c.SendString("Range")
+	})
+
+	// Redirect
+	app.Get("/coffee", func(c *fiber.Ctx) error {
+		return c.Redirect("/teapot")
+	})
+
+	app.Get("/teapot", func(c *fiber.Ctx) error {
+		return c.Status(fiber.StatusTeapot).SendString("🍵 short and stout 🍵")
+	})
+
+	// app.Get("/", func(c *fiber.Ctx) error {
+	// 	return c.Redirect("/foo/bar")
+	// 	return c.Redirect("../login")
+	// 	return c.Redirect("http://example.com")
+	// 	return c.Redirect("http://example.com", 301)
+	// })
+
+	// Send && SendStream && SendString
+	app.Get("/send", func(c *fiber.Ctx) error {
+		return c.Send([]byte("Hello, World!")) // => "Hello, World!"
+	})
+
+	app.Get("/", func(c *fiber.Ctx) error {
+		return c.SendString("Hello, World!")
+		// => "Hello, World!"
+
+		// return c.SendStream(bytes.NewReader([]byte("Hello, World!")))
+		// // => "Hello, World!"
+	})
+
+	// SendFile
+	app.Get("/not-found", func(c *fiber.Ctx) error {
+		return c.SendFile("./public/404.html")
+
+		// // Disable compression
+		// return c.SendFile("./static/index.html", false)
+	})
+
+	// SendStatus
+	app.Get("/sendstatus", func(c *fiber.Ctx) error {
+		return c.SendStatus(415)
+		// => 415 "Unsupported Media Type"
+
+		// c.SendString("Hello, World!")
+		// return c.SendStatus(415)
+		// // => 415 "Hello, World!"
+	})
+
+	// Status
+	app.Get("/", func(c *fiber.Ctx) error {
+		c.Status(200)
+		return nil
+
+		// return c.Status(400).Send([]byte("Bad Request"))
+
+		// return c.Status(404).SendFile("./public/gopher.png")
+	})
 	// Listen
 	app.Listen(":3000")
 }
