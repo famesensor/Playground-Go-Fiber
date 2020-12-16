@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/recover"
 )
 
 // Bodyparser
@@ -41,8 +42,34 @@ func main() {
 	// 	return c.SendString("I'm Hook")
 	// })
 
+	// Fiber instance
 	app := fiber.New()
+	// // Fiber config custom error
+	// // Create a new fiber instance with custom config
+	// app := fiber.New(fiber.Config{
+	// 	// Override default error handler
+	// 	ErrorHandler: func(ctx *fiber.Ctx, err error) error {
+	// 		// Statuscode defaults to 500
+	// 		code := fiber.StatusInternalServerError
 
+	// 		// Retreive the custom statuscode if it's an fiber.*Error
+	// 		if e, ok := err.(*fiber.Error); ok {
+	// 			code = e.Code
+	// 		}
+
+	// 		// Send custom error page
+	// 		err = ctx.Status(code).SendFile(fmt.Sprintf("./%d.html", code))
+	// 		if err != nil {
+	// 			// In case the SendFile fails
+	// 			return ctx.Status(500).SendString("Internal Server Error")
+	// 		}
+
+	// 		// Return from handler
+	// 		return nil
+	// 	},
+	// })
+
+	// ...
 	// Basic route
 	app.Get("/", func(c *fiber.Ctx) error {
 		// fmt.Println(c.BaseURL())              // => http://google.com
@@ -568,6 +595,22 @@ func main() {
 
 		// return c.Status(404).SendFile("./public/gopher.png")
 	})
+
+	// ErrorHandler
+	// Catching Error
+	app.Use(recover.New())
+	app.Get("/errorhandler", func(c *fiber.Ctx) error {
+		panic("This panic is catched by fiber")
+	})
+
+	app.Get("/newerror", func(c *fiber.Ctx) error {
+		// 503 Service Unavailable
+		return fiber.ErrServiceUnavailable
+
+		// // 503 On vacation!
+		// return fiber.NewError(fiber.StatusServiceUnavailable, "On vacation!")
+	})
+
 	// Listen
 	app.Listen(":3000")
 }
